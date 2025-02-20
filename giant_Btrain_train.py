@@ -21,19 +21,7 @@ class tractor:
         self.width = width
         self.vel = vel
 		
-class trailer1:
-    def __init__(self, x, y, x_prev, y_prev, yaw, yaw_prev, length, width, vel):
-        self.x = x
-        self.y = y
-        self.x_prev = x_prev
-        self.y_prev = y_prev
-        self.yaw = yaw
-        self.yaw_prev = yaw_prev
-        self.length = length
-        self.width = width
-        self.vel = vel
-
-class dolly:
+class trailer:
     def __init__(self, x, y, x_prev, y_prev, yaw, yaw_prev, length, width, vel):
         self.x = x
         self.y = y
@@ -122,8 +110,8 @@ class ga:
         return()
     def fitness_calc():
         # Calculate the fitness
-        ga.fitness[ga.chrom] = 1/(1 + 5*(np.abs(tractor.x) + np.abs(dolly.x) + np.abs(trailer1.x)) + (np.abs(tractor.yaw) + np.abs(dolly.yaw) + np.abs(trailer1.yaw)))
-        #ga.fitness[ga.chrom] = 1/(1 + 5*(np.abs(dolly.x)) + (np.abs(dolly.yaw)))
+        ga.fitness[ga.chrom] = 1/(1 + 5*(np.abs(tractor.x) + np.abs(trailer2.x) + np.abs(trailer1.x)) + (np.abs(tractor.yaw) + np.abs(trailer2.yaw) + np.abs(trailer1.yaw)))
+        #ga.fitness[ga.chrom] = 1/(1 + 5*(np.abs(trailer2.x)) + (np.abs(trailer2.yaw)))
         return(ga.fitness[ga.chrom])
     def select():
         # Select the best weights
@@ -183,228 +171,6 @@ def pid_controller(goal, dt):
     pid.error_prev = pid.error
     return(delta)
     
-
-def sm_controller(dt):
-    # Controller Weights
-
-    # Please use these weights
-    #k2x, qxd = 0.1, -0.20
-    #k2y, qyd = -0.4, -0.2
-    k1x, qx = 0.1, -0.20
-    k1y, qy = -0.4, -0.4
-
-    #Complete
-    #Best Alltime Fit:  0.033937771036568226
-    #Best Generation:  2166  
-    #Weights:  [ 0.70748806 -1.         -0.24833786 -0.82330745  0.59996607  0.3785572
-    #-0.78290688 -0.09847948]
-
-
-    # Good for offsetback
-    k1x, qx = ga.weights[ga.chrom, 0], ga.weights[ga.chrom, 1]
-    k2x, qxd = ga.weights[ga.chrom, 2], ga.weights[ga.chrom,6]
-    k1y, qy = ga.weights[ga.chrom, 3], ga.weights[ga.chrom, 4]
-    k2y, qyd = ga.weights[ga.chrom, 5], ga.weights[ga.chrom, 7]
-    
-    
-    # Sliding surface - Lat Error
-    sm.error_xd = dolly.x
-    sm.error_xd_dot = (dolly.x-dolly.x_prev)/dt
-    s_x_d = (sm.error_xd_dot + k2x*sm.error_xd)
-    #s_x_d = (sm.error_xd_dot + k2x*sm.error_xd)
-    #sm.s_x = sm.error_x1_dot + sm.error_x2_dot + k1x*(sm.error_x1 + sm.error_x2)
-
-    # Sliding surface - Trailer Angle
-    sm.error_yd = dolly.yaw
-    sm.error_yd_dot = (dolly.yaw-dolly.yaw_prev)/dt
-    s_y_d = (sm.error_yd_dot + k2y*sm.error_yd)
-    #s_y_d = (sm.error_yd_dot + k2y*sm.error_yd)
-    #sm.s_y = sm.error_y1_dot + k1y*sm.error_y1
-    #sm.s_y = sm.error_y1_dot  + sm.error_y2_dot + k1y*(sm.error_y1 + sm.error_y2)
-
-    if s_x_d < 0:
-        s_dot_x_d = qxd
-    else:
-        s_dot_x_d = -qxd
-
-    if s_y_d < 0:
-        s_dot_y_d = qyd
-    else:
-        s_dot_y_d = -qyd
-    
-    theta_x = -s_x_d + -s_dot_x_d
-    theta_y = -s_y_d + -s_dot_y_d
-    theta = theta_x + theta_y
-    sm.s_x_prev = sm.s_x
-    sm.s_y_prev = sm.s_y
-
-    # Limit the articulation angle we can request
-    if theta > 1.57:
-        theta = 1.57
-    elif theta < -1.57:
-        theta = -1.57
-
-    sm.error_x1 = trailer1.x
-    sm.error_x1_dot = (trailer1.x-trailer1.x_prev)/dt
-    sm.s_x = (sm.error_x1_dot + k1x*sm.error_x1)
-
-    sm.error_y1_dot = ((trailer1.yaw-theta)-(sm.error_y1))/dt
-    sm.error_y1 = trailer1.yaw
-    sm.s_y = (sm.error_y1_dot + k1y*sm.error_y1)
-
-    if sm.s_x < 0:
-        sm.s_dot_x = qx
-    else:
-        sm.s_dot_x = -qx
-
-    if sm.s_y < 0:
-        sm.s_dot_y = qy
-    else:
-        sm.s_dot_y = -qy
-
-    theta_x = -sm.s_x + -sm.s_dot_x
-    theta_x = 0
-    theta_y = -sm.s_y + -sm.s_dot_y
-        
-    # Limit the articulation angle we can request
-    if theta > 1.57:
-        theta = 1.57
-    elif theta < -1.57:
-        theta = -1.57
-        
-        
-    return(theta)  
-
-def sm_controlle_old(dt):
-    # Controller Weights
-
-    # Please use these weights
-    #k1x, qx = 0.1, -0.20
-    #k1y, qy = -0.4, -0.2
-    
-    # Good for offsetback
-    k1x, qx = ga.weights[ga.chrom, 0], ga.weights[ga.chrom, 1]
-    k2x, qxd = ga.weights[ga.chrom, 2], ga.weights[ga.chrom,6]
-    k1y, qy = ga.weights[ga.chrom, 3], ga.weights[ga.chrom, 4]
-    k2y, qyd = ga.weights[ga.chrom, 5], ga.weights[ga.chrom, 7]
-    
-    
-    # Sliding surface - Lat Error
-    sm.error_x1 = trailer1.x
-    sm.error_x1_dot = (trailer1.x-trailer1.x_prev)/dt
-    sm.error_xd = dolly.x
-    sm.error_xd_dot = (dolly.x-dolly.x_prev)/dt
-    sm.s_x = (sm.error_x1_dot + k1x*sm.error_x1) + (sm.error_xd_dot + k2x*sm.error_xd)
-    #s_x_d = (sm.error_xd_dot + k2x*sm.error_xd)
-    #sm.s_x = sm.error_x1_dot + sm.error_x2_dot + k1x*(sm.error_x1 + sm.error_x2)
-
-    # Sliding surface - Trailer Angle
-    sm.error_y1 = trailer1.yaw
-    sm.error_y1_dot = (trailer1.yaw-trailer1.yaw_prev)/dt
-    sm.error_yd = dolly.yaw
-    sm.error_yd_dot = (dolly.yaw-dolly.yaw_prev)/dt
-    sm.s_y = (sm.error_y1_dot + k1y*sm.error_y1) + (sm.error_yd_dot + k2y*sm.error_yd)
-    #s_y_d = (sm.error_yd_dot + k2y*sm.error_yd)
-    #sm.s_y = sm.error_y1_dot + k1y*sm.error_y1
-    #sm.s_y = sm.error_y1_dot  + sm.error_y2_dot + k1y*(sm.error_y1 + sm.error_y2)
-
-    
-    if sm.s_x < 0:
-        sm.s_dot_x = qx
-    else:
-        sm.s_dot_x = -qx
-
-    if sm.s_y < 0:
-        sm.s_dot_y = qy
-    else:
-        sm.s_dot_y = -qy
-
-    #if s_x_d < 0:
-    #    s_dot_x_d = qxd
-    #else:
-    #    s_dot_x_d = -qxd
-
-    #if s_y_d < 0:
-    #    s_dot_y_d = qyd
-    #else:
-    #    s_dot_y_d = -qyd
-    
-    theta_x = -sm.s_x + -sm.s_dot_x# + -s_x_d + -s_dot_x_d
-    theta_y = -sm.s_y + -sm.s_dot_y# + -s_y_d + -s_dot_y_d
-    theta = theta_x + theta_y
-    sm.s_x_prev = sm.s_x
-    sm.s_y_prev = sm.s_y
-
-    # If close to zero error use a simpler control scheme
-    if np.abs(tractor.x) < 0.1:
-        theta = trailer1.yaw
-        
-    # Limit the articulation angle we can request
-    if theta > 1.57:
-        theta = 1.57
-    elif theta < -1.57:
-        theta = -1.57
-        
-        
-    return(theta)    
-    
-def sm_controller_single(dt):
-    # Controller Weights
-
-    # Please use these weights
-    #k1x, qx = 0.1, -0.20
-    #k1y, qy = -0.4, -0.2
-    
-    # Good for offsetback
-    k1x, qx = 0.12, -0.1
-    k1y, qy = -0.2, -0.1
-
-    
-    
-    
-    # Sliding surface - Lat Error
-    sm.error_x = trailer1.x
-    sm.error_x_dot = (trailer1.x-trailer1.x_prev)/dt
-    sm.s_x = sm.error_x_dot + k1x*sm.error_x
-    sm.s_dot_x = qy*(sm.s_x-sm.s_x_prev)/dt
-
-    # Sliding surface - Trailer Angle
-    sm.error_y = trailer1.yaw
-    sm.error_y_dot = (trailer1.yaw-trailer1.yaw_prev)/dt
-    sm.s_y = sm.error_y_dot + k1y*sm.error_y
-    sm.s_dot_y = qy*(sm.s_y-sm.s_y_prev)/dt
-
-    
-    if sm.s_x < 0:
-        sm.s_dot_x = qx
-    else:
-        sm.s_dot_x = -qx
-
-    if sm.s_y < 0:
-        sm.s_dot_y = qy
-    else:
-        sm.s_dot_y = -qy
-    
-    theta_x = -sm.s_x + -sm.s_dot_x
-    theta_y = -sm.s_y + -sm.s_dot_y
-    theta = theta_x + theta_y
-    sm.s_x_prev = sm.s_x
-    sm.s_y_prev = sm.s_y
-
-    # If close to zero error use a simpler control scheme
-    if np.abs(tractor.x) < 0.1:
-        theta = trailer1.yaw
-        
-    # Limit the articulation angle we can request
-    if theta > 1.57:
-        theta = 1.57
-    elif theta < -1.57:
-        theta = -1.57
-        
-        
-    return(theta)
-
-
 def nn_controller():
     nn.w = ga.weights[ga.chrom,:]
 
@@ -415,14 +181,26 @@ def nn_controller():
     #-0.51024424  0.25566677  0.5669994  -0.64711265  0.94448799  0.49281207
     #-0.09850194  0.65096077  0.93635807  0.04509822 -0.46002495  0.72295723]
 	
-	# Neurons
+	# Articulation Angles
     z1 = np.tanh((tractor.yaw-trailer1.yaw) * nn.w[0])
-    z2 = np.tanh((trailer1.yaw - dolly.yaw) * nn.w[1])
-    z3 = np.tanh((dolly.x) * nn.w[2])
-    z4 = np.tanh((dolly.yaw) * nn.w[3])
+    z2 = np.tanh((trailer1.yaw-trailer2.yaw) * nn.w[1])
+    z3 = np.tanh((trailer2.yaw-trailer3.yaw) * nn.w[2])
+    z4 = np.tanh((trailer3.yaw-trailer4.yaw) * nn.w[3])
+    z5 = np.tanh((trailer4.yaw-trailer5.yaw) * nn.w[4])
+
+    # Last Trailer Location
+    z6 = np.tanh((trailer5.x) * nn.w[5])
+    z7 = np.tanh((trailer5.yaw) * nn.w[6])
+
+    # Layer 1
     z5 = np.tanh(z1 * nn.w[4] + z2 * nn.w[5] + z3 * nn.w[6] + z4 * nn.w[7]) 
     z6 = np.tanh(z1 * nn.w[8] + z2 * nn.w[9] + z3 * nn.w[10] + z4 * nn.w[11]) 
     z7 = np.tanh(z1 * nn.w[12] + z2 * nn.w[13] + z3 * nn.w[14] + z4 * nn.w[15]) 
+    z5 = np.tanh(z1 * nn.w[4] + z2 * nn.w[5] + z3 * nn.w[6] + z4 * nn.w[7]) 
+    z6 = np.tanh(z1 * nn.w[8] + z2 * nn.w[9] + z3 * nn.w[10] + z4 * nn.w[11]) 
+    z7 = np.tanh(z1 * nn.w[12] + z2 * nn.w[13] + z3 * nn.w[14] + z4 * nn.w[15]) 
+
+    # Layer 2
     z8 = np.tan(z5 * nn.w[16] + z6 * nn.w[17] + z7 * nn.w[18])
     z9 = np.tan(z5 * nn.w[19] + z6 * nn.w[20] + z7 * nn.w[21])
     z10 = np.tanh(z8*nn.w[22] + z9*nn.w[23])
@@ -455,28 +233,34 @@ def kin_model(delta, dt, vel):
     L1c = 0         #meters
     #L_tract = 6     #meters
     #L_trail = 16.15 #meters
-    #L_dolly = 2.6   #meters
+    #L_trailer2 = 2.6   #meters
     
     # Calculate articulation angles and apply limits
     art_angle = tractor.yaw - trailer1.yaw
-    art_angle2 = trailer1.yaw - dolly.yaw
+    art_angle2 = trailer1.yaw - trailer2.yaw
+    art_angle3 = trailer2.yaw - trailer3.yaw
+    art_angle4 = trailer3.yaw - trailer4.yaw
+    art_angle5 = trailer4.yaw - trailer5.yaw
 
     # Calculate Velocities
     try:
         #trailer1.vel = -(np.abs((trailer1.x**2 - trailer1.x_prev**2)) + np.abs((trailer1.y**2 - trailer1.y_prev**2)))**0.5
-        #dolly.vel = -(np.abs((dolly.x**2 - dolly.x_prev**2)) + np.abs((dolly.y**2 - dolly.y_prev**2)))**0.5
+        #trailer2.vel = -(np.abs((trailer2.x**2 - trailer2.x_prev**2)) + np.abs((trailer2.y**2 - trailer2.y_prev**2)))**0.5
         trailer1.vel = -(np.abs((trailer1.x**2 + trailer1.y**2) - (trailer1.x_prev**2 + trailer1.y_prev**2)))**0.5
-        dolly.vel = -(np.abs((dolly.x**2 + dolly.y**2) - (dolly.x_prev**2 + dolly.y_prev**2)))**0.5
+        trailer2.vel = -(np.abs((trailer2.x**2 + trailer2.y**2) - (trailer2.x_prev**2 + trailer2.y_prev**2)))**0.5
     except:
         trailer1.vel = 0
-        dolly.vel = 0
+        trailer2.vel = 0
     
     # Kinematic model
     x_dot = vel*np.sin(tractor.yaw)
     y_dot = vel*np.cos(tractor.yaw)
     psi_tract_dot = vel*np.tan(delta) / tractor.length
     psi_trail1_dot = vel*np.sin(art_angle)/trailer1.length + vel*L1c*np.cos(art_angle)/(tractor.length*trailer1.length)*np.tan(delta)
-    psi_dolly_dot = vel*np.sin(art_angle2)/dolly.length
+    psi_trailer2_dot = vel*np.sin(art_angle2)/trailer2.length
+    psi_trail3_dot = vel*np.sin(art_angle3)/trailer3.length
+    psi_trail4_dot = vel*np.sin(art_angle4)/trailer4.length
+    psi_trail5_dot = vel*np.sin(art_angle5)/trailer5.length
 
     # Update Previous positions
     tractor.x_prev = tractor.x
@@ -484,9 +268,18 @@ def kin_model(delta, dt, vel):
     trailer1.x_prev = trailer1.x
     trailer1.y_prev = trailer1.y
     trailer1.yaw_prev = trailer1.yaw
-    dolly.x_prev = dolly.x
-    dolly.y_prev = dolly.y
-    dolly.yaw_prev = dolly.yaw
+    trailer2.x_prev = trailer2.x
+    trailer2.y_prev = trailer2.y
+    trailer2.yaw_prev = trailer2.yaw
+    trailer3.x_prev = trailer3.x
+    trailer3.y_prev = trailer3.y
+    trailer3.yaw_prev = trailer3.yaw
+    trailer4.x_prev = trailer4.x
+    trailer4.y_prev = trailer4.y
+    trailer4.yaw_prev = trailer4.yaw
+    trailer5.x_prev = trailer5.x
+    trailer5.y_prev = trailer5.y
+    trailer5.yaw_prev = trailer5.yaw
     
     # Update Positions
     tractor.x = tractor.x + x_dot * dt
@@ -498,10 +291,25 @@ def kin_model(delta, dt, vel):
     trailer1.y = tractor.y - np.cos(trailer1.yaw)*(trailer1.length)
     art_angle = tractor.yaw - trailer1.yaw
 
-    dolly.yaw = dolly.yaw + psi_dolly_dot * dt
-    dolly.x = trailer1.x - np.sin(dolly.yaw)*(dolly.length)
-    dolly.y = trailer1.y - np.cos(dolly.yaw)*(dolly.length)
-    art_angle2 = trailer1.yaw - dolly.yaw
+    trailer2.yaw = trailer2.yaw + psi_trailer2_dot * dt
+    trailer2.x = trailer1.x - np.sin(trailer2.yaw)*(trailer2.length)
+    trailer2.y = trailer1.y - np.cos(trailer2.yaw)*(trailer2.length)
+    art_angle2 = trailer1.yaw - trailer2.yaw
+
+    trailer3.yaw = trailer3.yaw + psi_trail3_dot * dt
+    trailer3.x = trailer2.x - np.sin(trailer3.yaw)*(trailer3.length)
+    trailer3.y = trailer2.y - np.cos(trailer3.yaw)*(trailer3.length)
+    art_angle3 = trailer2.yaw - trailer3.yaw
+
+    trailer4.yaw = trailer4.yaw + psi_trail4_dot * dt
+    trailer4.x = trailer3.x - np.sin(trailer4.yaw)*(trailer4.length)
+    trailer4.y = trailer3.y - np.cos(trailer4.yaw)*(trailer4.length)
+    art_angle4 = trailer3.yaw - trailer4.yaw
+
+    trailer5.yaw = trailer5.yaw + psi_trail5_dot * dt
+    trailer5.x = trailer4.x - np.sin(trailer5.yaw)*(trailer5.length)
+    trailer5.y = trailer4.y - np.cos(trailer5.yaw)*(trailer5.length)
+    art_angle5 = trailer4.yaw - trailer5.yaw
 
 
     return()
@@ -512,17 +320,31 @@ def kin_model(delta, dt, vel):
 # -----------------        Main       --------------------
 # --------------------------------------------------------
 # Setup Simulation
-controller_choice = 'sm'
+controller_choice = 'nn'
 maneuver_choice = 'alley'
 save2file = 0
 sm.error_y1 = 0
 
-dolly.width = 2.6
-dolly.length = 16.15
+trailer1 = trailer(0,0,0,0,0,0,0,0,0)
+trailer2 = trailer(0,0,0,0,0,0,0,0,0)
+trailer3 = trailer(0,0,0,0,0,0,0,0,0)
+trailer4 = trailer(0,0,0,0,0,0,0,0,0)
+trailer5 = trailer(0,0,0,0,0,0,0,0,0)
+
 tractor.width = 2.6
 tractor.length = 6
 trailer1.width = 2.6
 trailer1.length = 16.15
+trailer2.width = 2.6
+trailer2.length = 16.15
+trailer3.width = 2.6
+trailer3.length = 16.15
+trailer4.width = 2.6
+trailer4.length = 16.15
+trailer5.width = 2.6
+trailer5.length = 16.15
+
+
 
 if controller_choice == 'nn':
     ga.numweights = 24
@@ -543,10 +365,10 @@ if maneuver_choice == 'offset':
     trailer1.yaw = 0 # Error measured relative to y axis (rad)
     trailer1.yaw_prev = trailer1.yaw
 
-    dolly.x = tractor.x
-    dolly.y = trailer1.y - 2.6
-    dolly.yaw = trailer1.yaw # Error measured relative to y axis (rad)
-    dolly.yaw_prev = trailer1.yaw
+    trailer2.x = tractor.x
+    trailer2.y = trailer1.y - 2.6
+    trailer2.yaw = trailer1.yaw # Error measured relative to y axis (rad)
+    trailer2.yaw_prev = trailer1.yaw
 
     vel = -1 #m/s
 
@@ -558,21 +380,48 @@ if maneuver_choice == 'offset':
 elif maneuver_choice == 'alley':
     # For alleypark
     dt = 0.1 #seconds
-    sim_time = 100 #seconds
+    sim_time = 200 #seconds
     steps_max = int(np.floor(sim_time / dt)) #iterations
-    tractor.x = 20 # Error measured at kingpin (meters)
+    tractor.x = 100 # Error measured at kingpin (meters)
     tractor.y = 5 # Error measured at kingpin (meters)
     tractor.yaw = 3.14/2 # Error measured relative to y axis (rad)
+    tractor.width = 2.6
+    tractor.length = 6
 
     trailer1.x = tractor.x
     trailer1.y = tractor.y - trailer1.length
     trailer1.yaw = tractor.yaw # Error measured relative to y axis (rad)
     trailer1.yaw_prev = trailer1.yaw
+    trailer1.width = 2.6
+    trailer1.length = 16.15
 
-    dolly.x = tractor.x
-    dolly.y = trailer1.y - dolly.length
-    dolly.yaw = trailer1.yaw # Error measured relative to y axis (rad)
-    dolly.yaw_prev = trailer1.yaw
+    trailer2.x = tractor.x
+    trailer2.y = trailer1.y - trailer2.length
+    trailer2.yaw = trailer1.yaw # Error measured relative to y axis (rad)
+    trailer2.yaw_prev = trailer1.yaw
+    trailer2.width = 2.6
+    trailer2.length = 16.15
+
+    trailer3.x = tractor.x
+    trailer3.y = trailer2.y - trailer1.length
+    trailer3.yaw = tractor.yaw # Error measured relative to y axis (rad)
+    trailer3.yaw_prev = trailer1.yaw
+    trailer3.width = 2.6
+    trailer3.length = 16.15
+
+    trailer4.x = tractor.x
+    trailer4.y = trailer3.y - trailer1.length
+    trailer4.yaw = tractor.yaw # Error measured relative to y axis (rad)
+    trailer4.yaw_prev = trailer1.yaw
+    trailer4.width = 2.6
+    trailer4.length = 16.15
+
+    trailer5.x = tractor.x
+    trailer5.y = trailer4.y - trailer1.length
+    trailer5.yaw = tractor.yaw # Error measured relative to y axis (rad)
+    trailer5.yaw_prev = trailer1.yaw
+    trailer5.width = 2.6
+    trailer5.length = 16.15
 
     vel = -1 #m/s
 
@@ -585,7 +434,7 @@ ga.setup()
 nn.setup()
 
 # Run through 10,000 generations
-for gen in range(0, 1000):
+for gen in range(0, 1):
     ga.gen = gen + 1
     ga.generate_weights()
     fit_prev = 0
@@ -606,12 +455,12 @@ for gen in range(0, 1000):
         delta_prev = 0
         tractor.x_prev = tractor.x
         trailer1.x_prev = trailer1.x
-        dolly.x_prev = dolly.x
+        trailer2.x_prev = trailer2.x
         sm.s_x = 0
         sm.s_y = 0
         sm.s_x_prev = 0
         sm.s_y_prev = 0
-        simulation_variables = np.zeros([steps_max, 11])
+        simulation_variables = np.zeros([steps_max, 20])
         nn.prev_scen = 0
 
         # Setup Goal Array
@@ -629,18 +478,18 @@ for gen in range(0, 1000):
             tractor.length = 6
 
             trailer1.x = tractor.x
-            trailer1.y = 55 - 16.15
+            trailer1.y = 55 - trailer1.length
             trailer1.yaw = 0 # Error measured relative to y axis (rad)
             trailer1.yaw_prev = trailer1.yaw
             trailer1.width = 2.6
             trailer1.length = 16.15
 
-            dolly.x = tractor.x
-            dolly.y = trailer1.y - 2.6
-            dolly.yaw = trailer1.yaw # Error measured relative to y axis (rad)
-            dolly.yaw_prev = trailer1.yaw
-            dolly.width = 2.6
-            dolly.length = 16.15
+            trailer2.x = tractor.x
+            trailer2.y = trailer1.y - 2.6
+            trailer2.yaw = trailer1.yaw # Error measured relative to y axis (rad)
+            trailer2.yaw_prev = trailer1.yaw
+            trailer2.width = 2.6
+            trailer2.length = 16.15
 
             vel = -1 #m/s
 
@@ -648,7 +497,7 @@ for gen in range(0, 1000):
             # For alleypark
             dt = 0.1 #seconds
             steps_max = int(np.floor(sim_time / dt)) #iterations
-            tractor.x = 50 # Error measured at kingpin (meters)
+            tractor.x = 100 # Error measured at kingpin (meters)
             tractor.y = 5 # Error measured at kingpin (meters)
             tractor.yaw = 3.14/2 # Error measured relative to y axis (rad)
             tractor.width = 2.6
@@ -661,12 +510,33 @@ for gen in range(0, 1000):
             trailer1.width = 2.6
             trailer1.length = 16.15
 
-            dolly.x = tractor.x
-            dolly.y = trailer1.y - dolly.length
-            dolly.yaw = trailer1.yaw # Error measured relative to y axis (rad)
-            dolly.yaw_prev = trailer1.yaw
-            dolly.width = 2.6
-            dolly.length = 16.15
+            trailer2.x = tractor.x
+            trailer2.y = trailer1.y - trailer2.length
+            trailer2.yaw = trailer1.yaw # Error measured relative to y axis (rad)
+            trailer2.yaw_prev = trailer1.yaw
+            trailer2.width = 2.6
+            trailer2.length = 16.15
+
+            trailer3.x = tractor.x
+            trailer3.y = trailer2.y - trailer1.length
+            trailer3.yaw = tractor.yaw # Error measured relative to y axis (rad)
+            trailer3.yaw_prev = trailer1.yaw
+            trailer3.width = 2.6
+            trailer3.length = 16.15
+
+            trailer4.x = tractor.x
+            trailer4.y = trailer3.y - trailer1.length
+            trailer4.yaw = tractor.yaw # Error measured relative to y axis (rad)
+            trailer4.yaw_prev = trailer1.yaw
+            trailer4.width = 2.6
+            trailer4.length = 16.15
+
+            trailer5.x = tractor.x
+            trailer5.y = trailer4.y - trailer1.length
+            trailer5.yaw = tractor.yaw # Error measured relative to y axis (rad)
+            trailer5.yaw_prev = trailer1.yaw
+            trailer5.width = 2.6
+            trailer5.length = 16.15
 
             vel = -1 #m/s
 
@@ -698,8 +568,7 @@ for gen in range(0, 1000):
             kin_model(delta, dt, vel)
             
             # Save data
-            simulation_variables[idx,:] = np.array([tractor.x, tractor.y, trailer1.x, trailer1.y, tractor.yaw, trailer1.yaw, dolly.x, dolly.y, dolly.yaw, delta, simtime], dtype=object)
-
+            simulation_variables[idx,:] = np.array([tractor.x, tractor.y, trailer1.x, trailer1.y, tractor.yaw, trailer1.yaw, trailer2.x, trailer2.y, trailer2.yaw, trailer3.x, trailer3.y, trailer3.yaw, trailer4.x, trailer4.y, trailer4.yaw, trailer5.x, trailer5.y, trailer5.yaw, delta, simtime], dtype=object)
         # Calculate Fitness
         fit = ga.fitness_calc()
         if np.max(ga.fitness) > ga.alltime_fit:
@@ -741,12 +610,24 @@ def animate(i):
     tract_pat = plt.Rectangle(xy=(simulation_variables_best[0,0] - 1*math.cos(simulation_variables_best[0,4]), simulation_variables_best[0,1] + 1*math.sin(simulation_variables_best[0,4])), width=tractor.width, height=tractor.length, angle = simulation_variables_best[0,4], color='k')
     tract_pat.rotation_point='center'
     tract_pat.angle = simulation_variables_best[0,4] * -180/3.14
-    dolly_pat = plt.Rectangle(xy=(simulation_variables_best[0,6] - 1*math.cos(simulation_variables_best[0,8]), simulation_variables_best[0,7] + 1*math.sin(simulation_variables_best[0,8])), width=dolly.width, height=dolly.length, angle = simulation_variables_best[0,8], color='b')
-    dolly_pat.rotation_point='center'
-    dolly_pat.angle = simulation_variables_best[0,8] * -180/3.14
-    ax.add_patch(trail_pat)
-    ax.add_patch(tract_pat)
-    ax.add_patch(dolly_pat)
+    trailer2_pat = plt.Rectangle(xy=(simulation_variables_best[0,6] - 1*math.cos(simulation_variables_best[0,8]), simulation_variables_best[0,7] + 1*math.sin(simulation_variables_best[0,8])), width=trailer2.width, height=trailer2.length, angle = simulation_variables_best[0,8], color='b')
+    trailer2_pat.rotation_point='center'
+    trailer2_pat.angle = simulation_variables_best[0,8] * -180/3.14
+    trailer3_pat = plt.Rectangle(xy=(simulation_variables_best[0,9] - 1*math.cos(simulation_variables_best[0,11]), simulation_variables_best[0,10] + 1*math.sin(simulation_variables_best[0,11])), width=trailer2.width, height=trailer2.length, angle = simulation_variables_best[0,11], color='r')
+    trailer3_pat.rotation_point='center'
+    trailer3_pat.angle = simulation_variables_best[0,11] * -180/3.14
+    trailer4_pat = plt.Rectangle(xy=(simulation_variables_best[0,12] - 1*math.cos(simulation_variables_best[0,14]), simulation_variables_best[0,13] + 1*math.sin(simulation_variables_best[0,14])), width=trailer2.width, height=trailer2.length, angle = simulation_variables_best[0,14], color='b')
+    trailer4_pat.rotation_point='center'
+    trailer4_pat.angle = simulation_variables_best[0,14] * -180/3.14
+    trailer5_pat = plt.Rectangle(xy=(simulation_variables_best[0,15] - 1*math.cos(simulation_variables_best[0,17]), simulation_variables_best[0,18] + 1*math.sin(simulation_variables_best[0,17])), width=trailer2.width, height=trailer2.length, angle = simulation_variables_best[0,17], color='r')
+    trailer5_pat.rotation_point='center'
+    trailer5_pat.angle = simulation_variables_best[0,17] * -180/3.14
+    #ax.add_patch(trail_pat)
+    #ax.add_patch(tract_pat)
+    #ax.add_patch(trailer2_pat)
+    #ax.add_patch(trailer3_pat)
+    #ax.add_patch(trailer4_pat)
+    #ax.add_patch(trailer5_pat)
     
     trail_pat = plt.Rectangle(xy=(simulation_variables_best[i,2] - 1*math.cos(simulation_variables_best[i,5]), simulation_variables_best[i,3] + 1*math.sin(simulation_variables_best[i,5])), height=trailer1.length, width=trailer1.width, angle=simulation_variables_best[i,5],color='r')
     trail_pat.rotation_point='center'
@@ -754,18 +635,30 @@ def animate(i):
     tract_pat = plt.Rectangle(xy=(simulation_variables_best[i,0] - 1*math.cos(simulation_variables_best[i,4]), simulation_variables_best[i,1] + 1*math.sin(simulation_variables_best[i,4])), width=tractor.width, height=tractor.length, angle = simulation_variables_best[i,4], color='k')
     tract_pat.rotation_point='center'
     tract_pat.angle = simulation_variables_best[i,4] * -180/3.14
-    dolly_pat = plt.Rectangle(xy=(simulation_variables_best[i,6] - 1*math.cos(simulation_variables_best[i,8]), simulation_variables_best[i,7] + 1*math.sin(simulation_variables_best[i,8])), width=dolly.width, height=dolly.length, angle = simulation_variables_best[0,8], color='b')
-    dolly_pat.rotation_point='center'
-    dolly_pat.angle = simulation_variables_best[i,8] * -180/3.14
+    trailer2_pat = plt.Rectangle(xy=(simulation_variables_best[i,6] - 1*math.cos(simulation_variables_best[i,8]), simulation_variables_best[i,7] + 1*math.sin(simulation_variables_best[i,8])), width=trailer2.width, height=trailer2.length, angle = simulation_variables_best[0,8], color='b')
+    trailer2_pat.rotation_point='center'
+    trailer2_pat.angle = simulation_variables_best[i,8] * -180/3.14
     goal_pat = plt.Rectangle(xy=(-1.8, -12), width = 3.6, height = 12, color='g')
+    trailer3_pat = plt.Rectangle(xy=(simulation_variables_best[i,9] - 1*math.cos(simulation_variables_best[i,11]), simulation_variables_best[i,10] + 1*math.sin(simulation_variables_best[i,11])), width=trailer2.width, height=trailer2.length, angle = simulation_variables_best[i,11], color='r')
+    trailer3_pat.rotation_point='center'
+    trailer3_pat.angle = simulation_variables_best[i,11] * -180/3.14
+    trailer4_pat = plt.Rectangle(xy=(simulation_variables_best[i,12] - 1*math.cos(simulation_variables_best[i,14]), simulation_variables_best[i,13] + 1*math.sin(simulation_variables_best[i,14])), width=trailer2.width, height=trailer2.length, angle = simulation_variables_best[i,14], color='b')
+    trailer4_pat.rotation_point='center'
+    trailer4_pat.angle = simulation_variables_best[i,14] * -180/3.14
+    trailer5_pat = plt.Rectangle(xy=(simulation_variables_best[i,15] - 1*math.cos(simulation_variables_best[i,17]), simulation_variables_best[i,16] + 1*math.sin(simulation_variables_best[i,17])), width=trailer2.width, height=trailer2.length, angle = simulation_variables_best[i,17], color='r')
+    trailer5_pat.rotation_point='center'
+    trailer5_pat.angle = simulation_variables_best[i,17] * -180/3.14
     ax.add_patch(goal_pat)
     ax.add_patch(trail_pat)
     ax.add_patch(tract_pat)
-    ax.add_patch(dolly_pat)
+    ax.add_patch(trailer2_pat)
+    ax.add_patch(trailer3_pat)
+    ax.add_patch(trailer4_pat) 
+    ax.add_patch(trailer5_pat)
     plt.plot(simulation_variables_best[:i,2], simulation_variables_best[:i,3], color='r')
     plt.plot(simulation_variables_best[:i,0], simulation_variables_best[:i,1], color='k')
-    ax.set_xlim([-70, 70])
-    ax.set_ylim([-70, 70])
+    ax.set_xlim([-100, 100])
+    ax.set_ylim([-100, 100])
 anim = animation.FuncAnimation(fig, animate, frames=steps_max, interval=1, blit=False)
 #plt.xlim([-70,70])
 #plt.ylim([-10,70])
