@@ -121,8 +121,8 @@ class ga:
         return()
     def fitness_calc():
         # Calculate the fitness
-        #ga.fitness[ga.chrom] = 1/(1 + 5*(np.abs(tractor.x) + np.abs(dolly.x) + np.abs(trailer1.x)) + (np.abs(tractor.yaw) + np.abs(dolly.yaw) + np.abs(trailer1.yaw)))
-        ga.fitness[ga.chrom] = 1/(1 + 5*(np.abs(dolly.x)) + (np.abs(dolly.yaw)))
+        ga.fitness[ga.chrom] = 1/(1 + 5*(np.abs(tractor.x) + np.abs(dolly.x) + np.abs(trailer1.x)) + (np.abs(tractor.yaw) + np.abs(dolly.yaw) + np.abs(trailer1.yaw)))
+        #ga.fitness[ga.chrom] = 1/(1 + 5*(np.abs(dolly.x)) + (np.abs(dolly.yaw)))
         return(ga.fitness[ga.chrom])
     def select():
         # Select the best weights
@@ -192,10 +192,17 @@ def sm_controller(dt):
     k1x, qx = 0.1, -0.20
     k1y, qy = -0.4, -0.4
 
+    #Complete
+    #Best Alltime Fit:  0.033937771036568226
+    #Best Generation:  2166  
+    #Weights:  [ 0.70748806 -1.         -0.24833786 -0.82330745  0.59996607  0.3785572
+    #-0.78290688 -0.09847948]
+
+
     # Good for offsetback
-    #k1x, qx = ga.weights[ga.chrom, 0], ga.weights[ga.chrom, 1]
+    k1x, qx = ga.weights[ga.chrom, 0], ga.weights[ga.chrom, 1]
     k2x, qxd = ga.weights[ga.chrom, 2], ga.weights[ga.chrom,6]
-    #k1y, qy = ga.weights[ga.chrom, 3], ga.weights[ga.chrom, 4]
+    k1y, qy = ga.weights[ga.chrom, 3], ga.weights[ga.chrom, 4]
     k2y, qyd = ga.weights[ga.chrom, 5], ga.weights[ga.chrom, 7]
     
     
@@ -590,7 +597,7 @@ ga.setup()
 nn.setup()
 
 # Run through 10,000 generations
-for gen in range(0, 1000):
+for gen in range(0, 5000):
     ga.gen = gen + 1
     ga.generate_weights()
     fit_prev = 0
