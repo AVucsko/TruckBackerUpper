@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 import numpy as np
 import matplotlib.pyplot as plt
@@ -96,6 +97,9 @@ class ga:
         if ga.gen == 0:
             ga.weights = np.random.normal(0, .02, (ga.numchrom, ga.numweights))
             #ga.weights[0,:] = [ 0.70748806, -1, -0.24833786, -0.82330745, 0.59996607, 0.3785572, -0.78290688, -0.09847948]
+            ga.weights[0,:] = [-0.07967897, 1, 0.15166525, -0.96048383, 0.84038176, -0.08507545, 0.90395937, -0.20377866]
+#Weights:  [-0.67365892 -0.08752867 -0.00938624 -0.63784993  0.34701629  0.06051416 -0.30005213  0.20212789]
+
         else:
             for i in range(0, ga.numchrom):
                     ga.weights[i,:] = ga.best_weights + np.random.normal(0, .02, (1,ga.numweights))
@@ -110,7 +114,7 @@ class ga:
         return()
     def fitness_calc():
         # Calculate the fitness
-        ga.fitness[ga.chrom] = 1/(1 + (np.abs(tractor.x) + np.abs(trailer2.x) + np.abs(trailer1.x)) + 10*(np.abs(tractor.yaw) + np.abs(trailer2.yaw) + np.abs(trailer1.yaw)))
+        ga.fitness[ga.chrom] = 1/(1 + (np.abs(trailer2.x) + np.abs(trailer1.x)) + 10*(np.abs(trailer2.yaw) + np.abs(trailer1.yaw)))
         #ga.fitness[ga.chrom] = 1/(1 + 5*(np.abs(trailer2.x)) + (np.abs(trailer2.yaw)))
         return(ga.fitness[ga.chrom])
     def select():
@@ -498,7 +502,7 @@ if maneuver_choice == 'offset':
 elif maneuver_choice == 'alley':
     # For alleypark
     dt = 0.1 #seconds
-    sim_time = 80 #seconds
+    sim_time = 100 #seconds
     steps_max = int(np.floor(sim_time / dt)) #iterations
     tractor.x = 20 # Error measured at kingpin (meters)
     tractor.y = 5 # Error measured at kingpin (meters)
@@ -525,7 +529,7 @@ ga.setup()
 nn.setup()
 
 # Run through 10,000 generations
-for gen in range(0, 2000):
+for gen in range(0, 1000):
     ga.gen = gen + 1
     ga.generate_weights()
     fit_prev = 0
