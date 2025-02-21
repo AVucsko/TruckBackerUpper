@@ -65,7 +65,7 @@ class nn:
     def __init__(self, w):
         self.w1 = w
     def setup():
-        nn.w = np.zeros((1,24))
+        nn.w = np.zeros((1,103))
         nn.prev_scen = 0
 
 class ga:
@@ -110,7 +110,8 @@ class ga:
         return()
     def fitness_calc():
         # Calculate the fitness
-        ga.fitness[ga.chrom] = 1/(1 + 5*(np.abs(tractor.x) + np.abs(trailer2.x) + np.abs(trailer1.x)) + (np.abs(tractor.yaw) + np.abs(trailer2.yaw) + np.abs(trailer1.yaw)))
+        ga.fitness[ga.chrom] = 1/(1 + 5*(np.abs(tractor.x) + np.abs(trailer2.x) + np.abs(trailer1.x) + np.abs(trailer3.x) + np.abs(trailer4.x) + np.abs(trailer5.x))
+         + (np.abs(tractor.yaw) + np.abs(trailer2.yaw) + np.abs(trailer1.yaw) + np.abs(trailer3.yaw) + np.abs(trailer4.yaw) + np.abs(trailer5.yaw)))
         #ga.fitness[ga.chrom] = 1/(1 + 5*(np.abs(trailer2.x)) + (np.abs(trailer2.yaw)))
         return(ga.fitness[ga.chrom])
     def select():
@@ -193,19 +194,33 @@ def nn_controller():
     z7 = np.tanh((trailer5.yaw) * nn.w[6])
 
     # Layer 1
-    z5 = np.tanh(z1 * nn.w[4] + z2 * nn.w[5] + z3 * nn.w[6] + z4 * nn.w[7]) 
-    z6 = np.tanh(z1 * nn.w[8] + z2 * nn.w[9] + z3 * nn.w[10] + z4 * nn.w[11]) 
-    z7 = np.tanh(z1 * nn.w[12] + z2 * nn.w[13] + z3 * nn.w[14] + z4 * nn.w[15]) 
-    z5 = np.tanh(z1 * nn.w[4] + z2 * nn.w[5] + z3 * nn.w[6] + z4 * nn.w[7]) 
-    z6 = np.tanh(z1 * nn.w[8] + z2 * nn.w[9] + z3 * nn.w[10] + z4 * nn.w[11]) 
-    z7 = np.tanh(z1 * nn.w[12] + z2 * nn.w[13] + z3 * nn.w[14] + z4 * nn.w[15]) 
+    z8 = np.tanh(z1 * nn.w[7] + z2 * nn.w[8] + z3 * nn.w[9] + z4 * nn.w[10] + z6 * nn.w[11] + z7 * nn.w[12])
+    z9 = np.tanh(z1 * nn.w[13] + z2 * nn.w[14] + z3 * nn.w[15] + z4 * nn.w[16] + z6 * nn.w[17] + z7 * nn.w[18])
+    z10 = np.tanh(z1 * nn.w[19] + z2 * nn.w[20] + z3 * nn.w[21] + z4 * nn.w[22] + z6 * nn.w[23] + z7 * nn.w[24]) 
+    z11 = np.tanh(z1 * nn.w[25] + z2 * nn.w[26] + z3 * nn.w[27] + z4 * nn.w[28] + z6 * nn.w[29] + z7 * nn.w[30])
+    z12 = np.tanh(z1 * nn.w[31] + z2 * nn.w[32] + z3 * nn.w[33] + z4 * nn.w[34] + z6 * nn.w[35] + z7 * nn.w[36])
+    z13 = np.tanh(z1 * nn.w[37] + z2 * nn.w[38] + z3 * nn.w[39] + z4 * nn.w[40] + z6 * nn.w[41] + z7 * nn.w[42]) 
 
     # Layer 2
-    z8 = np.tan(z5 * nn.w[16] + z6 * nn.w[17] + z7 * nn.w[18])
-    z9 = np.tan(z5 * nn.w[19] + z6 * nn.w[20] + z7 * nn.w[21])
-    z10 = np.tanh(z8*nn.w[22] + z9*nn.w[23])
+    z14 = np.tanh(z8 * nn.w[43] + z9 * nn.w[44] + z10 * nn.w[45] + z11 * nn.w[46] + z12 * nn.w[47] + z13 * nn.w[68])
+    z15 = np.tanh(z8 * nn.w[48] + z9 * nn.w[49] + z10 * nn.w[50] + z11 * nn.w[51] + z12 * nn.w[52] + z13 * nn.w[69])
+    z16 = np.tanh(z8 * nn.w[53] + z9 * nn.w[54] + z10 * nn.w[55] + z11 * nn.w[56] + z12 * nn.w[57] + z13 * nn.w[70])
+    z17 = np.tanh(z8 * nn.w[58] + z9 * nn.w[59] + z10 * nn.w[60] + z11 * nn.w[61] + z12 * nn.w[62] + z13 * nn.w[71])
+    z18 = np.tanh(z8 * nn.w[63] + z9 * nn.w[64] + z10 * nn.w[65] + z11 * nn.w[66] + z12 * nn.w[67] + z13 * nn.w[72])
 
-    theta = z10*10 # Accidentally using z7 here worked in the past somehow
+    # Layer 3
+    z19 = np.tanh(z14 * nn.w[73] + z15 * nn.w[74] + z16 * nn.w[75] + z17 * nn.w[76] + z18 * nn.w[77])
+    z20 = np.tanh(z14 * nn.w[78] + z15 * nn.w[79] + z16 * nn.w[80] + z17 * nn.w[81] + z18 * nn.w[82])
+    z21 = np.tanh(z14 * nn.w[83] + z15 * nn.w[84] + z16 * nn.w[85] + z17 * nn.w[86] + z18 * nn.w[87])
+    z22 = np.tanh(z14 * nn.w[88] + z15 * nn.w[89] + z16 * nn.w[90] + z17 * nn.w[91] + z18 * nn.w[92])
+    z23 = np.tanh(z14 * nn.w[93] + z15 * nn.w[94] + z16 * nn.w[95] + z17 * nn.w[96] + z18 * nn.w[97])
+
+    # Out
+    z23 = np.tanh(z19 * nn.w[98] + z20 * nn.w[99] + z21 * nn.w[100] + z22 * nn.w[101] + z23 * nn.w[102])
+
+
+
+    theta = z21*10 # Accidentally using z7 here worked in the past somehow
     if theta > 1.57:
         theta = 1.57
     elif theta < -1.57:
@@ -347,7 +362,7 @@ trailer5.length = 16.15
 
 
 if controller_choice == 'nn':
-    ga.numweights = 24
+    ga.numweights = 103
 else:
     ga.numweights = 8
 
@@ -434,7 +449,7 @@ ga.setup()
 nn.setup()
 
 # Run through 10,000 generations
-for gen in range(0, 1):
+for gen in range(0, 5000):
     ga.gen = gen + 1
     ga.generate_weights()
     fit_prev = 0
