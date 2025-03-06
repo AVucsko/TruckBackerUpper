@@ -70,7 +70,7 @@ class nn:
         nn.prev_scen = 0
 
 class ga:
-    def __init__(self, weights, fitness, best_weights, second_weights, chrom, gen, alltime_fit, alltime_weight, numweights, numchrom):
+    def __init__(self, weights, fitness, best_weights, second_weights, chrom, gen, alltime_fit, alltime_weight, numweights, numchrom, rt):
         self.weights = weights
         self.fitness = fitness
         self.best_weights = best_weights
@@ -81,6 +81,7 @@ class ga:
         self.alltime_weight = alltime_weight
         self.numweights = numweights
         self.numchrom = numchrom
+        self.rt = rt
 
     def setup():
         ga.numchrom = 10
@@ -91,15 +92,15 @@ class ga:
         ga.gen = 0
         ga.alltime_fit = 0
         ga.alltime_weight = np.zeros((1,ga.numweights))
+        ga.rt = 0
 
     def generate_weights():
         # Generate random weights
         if ga.gen == 0:
-            ga.weights = np.random.normal(0, .02, (ga.numchrom, ga.numweights))
+            ga.weights = np.random.normal(0, .2, (ga.numchrom, ga.numweights))
             #ga.weights[0,:] = [ 0.70748806, -1, -0.24833786, -0.82330745, 0.59996607, 0.3785572, -0.78290688, -0.09847948]
-            ga.weights[0,:] = [-0.07967897, 1, 0.15166525, -0.96048383, 0.84038176, -0.08507545, 0.90395937, -0.20377866]
+            #ga.weights[0,:] = [-0.07967897, 1, 0.15166525, -0.96048383, 0.84038176, -0.08507545, 0.90395937, -0.20377866]
 #Weights:  [-0.67365892 -0.08752867 -0.00938624 -0.63784993  0.34701629  0.06051416 -0.30005213  0.20212789]
-
         else:
             for i in range(0, ga.numchrom):
                     ga.weights[i,:] = ga.best_weights + np.random.normal(0, .02, (1,ga.numweights))
@@ -108,13 +109,20 @@ class ga:
                             ga.weights[i,j] = 1
                         elif ga.weights[i,j] < -1:
                             ga.weights[i,j] = -1
+                        #1,6,4, and 7 must be negative
+                        if j == 1 or j == 6 or j == 4 or j == 7:
+                            if ga.weights[i,j] > 0:
+                                ga.weights[i,j] = 0
     def crossover():
         # Crossover the weights
         ga.best_weights = (ga.best_weights + ga.second_weights)/2
         return()
     def fitness_calc():
         # Calculate the fitness
-        ga.fitness[ga.chrom] = 1/(1 + (np.abs(trailer2.x) + np.abs(trailer1.x)) + 10*(np.abs(trailer2.yaw) + np.abs(trailer1.yaw)))
+        fit = 1/(1 + ga.rt*0.01 + (np.abs(trailer2.x) + np.abs(trailer1.x)) + 10*(np.abs(trailer2.yaw) + np.abs(trailer1.yaw)))
+        if fit > ga.fitness[ga.chrom]:
+            ga.fitness[ga.chrom] = fit
+        
         #ga.fitness[ga.chrom] = 1/(1 + 5*(np.abs(trailer2.x)) + (np.abs(trailer2.yaw)))
         return(ga.fitness[ga.chrom])
     def select():
@@ -190,7 +198,8 @@ def sm_controller(dt):
     #Best Generation:  2166  
     #Weights:  [ 0.70748806 -1.         -0.24833786 -0.82330745  0.59996607  0.3785572
     #-0.78290688 -0.09847948]
-
+    #Weights:  [ 0.46475076 -0.66715321 -0.10597424 -0.49287587 -0.13219838  0.48942562
+ #-0.13302599 -0.46613853]
 
     # Good for offsetback
     k1x, qx = ga.weights[ga.chrom, 0], ga.weights[ga.chrom, 1]
@@ -225,25 +234,26 @@ def sm_controller(dt):
     
     theta_x = -s_x_d + -s_dot_x_d
     theta_y = -s_y_d + -s_dot_y_d
-    theta = theta_x + theta_y
+    theta2 = theta_x + theta_y
     sm.s_x_prev = sm.s_x
     sm.s_y_prev = sm.s_y
 
-    if abs(trailer2.x) < 0.1:
-        theta = trailer2.yaw
+    if np.abs(trailer2.x) < 0.1 and np.abs(trailer2.yaw) < 0.1:
+        theta2 = -trailer2.yaw
 
     # Limit the articulation angle we can request
-    if theta > 1.57:
-        theta = 1.57
-    elif theta < -1.57:
-        theta = -1.57
+    if theta2 > 1.57:
+        theta2 = 1.57
+    elif theta2 < -1.57:
+        theta2 = -1.57
 
-    sm.error_x1 = trailer1.x
-    sm.error_x1_dot = (trailer1.x-trailer1.x_prev)/dt
+    sm.error_x1 = (trailer1.x - trailer2.x)
+    sm.error_x1_dot = ((trailer1.x-trailer2.x)-(trailer1.x_prev-trailer2.x_prev))/dt
     sm.s_x = (sm.error_x1_dot + k1x*sm.error_x1)
 
-    sm.error_y1_dot = ((trailer1.yaw-theta)-(sm.error_y1))/dt
-    sm.error_y1 = trailer1.yaw
+    art21 = trailer1.yaw - trailer2.yaw
+    sm.error_y1_dot = ((art21-theta2)-(sm.error_y1))/dt
+    sm.error_y1 = (art21-theta2)
     sm.s_y = (sm.error_y1_dot + k1y*sm.error_y1)
 
     if sm.s_x < 0:
@@ -259,18 +269,18 @@ def sm_controller(dt):
     theta_x = -sm.s_x + -sm.s_dot_x
     theta_x = 0
     theta_y = -sm.s_y + -sm.s_dot_y
-
-    if abs(trailer1.x) < 0.1:
-        theta = trailer1.yaw
+    theta1 = theta_x + theta_y
+    #if abs(trailer1.x) < 0.1:
+    #    theta1 = trailer1.yaw
         
     # Limit the articulation angle we can request
-    if theta > 1.57:
-        theta = 1.57
-    elif theta < -1.57:
-        theta = -1.57
+    if theta1 > 1.57:
+        theta1 = 1.57
+    elif theta1 < -1.57:
+        theta1 = -1.57
         
         
-    return(theta)  
+    return(theta1)  
 
 def sm_controlle_old(dt):
     # Controller Weights
@@ -409,6 +419,7 @@ def kin_model(delta, dt, vel):
         trailer1.vel = -(np.abs((trailer1.x**2 + trailer1.y**2) - (trailer1.x_prev**2 + trailer1.y_prev**2)))**0.5
         trailer2.vel = -(np.abs((trailer2.x**2 + trailer2.y**2) - (trailer2.x_prev**2 + trailer2.y_prev**2)))**0.5
     except:
+        print('whoopsies')
         trailer1.vel = 0
         trailer2.vel = 0
     
@@ -502,7 +513,7 @@ if maneuver_choice == 'offset':
 elif maneuver_choice == 'alley':
     # For alleypark
     dt = 0.1 #seconds
-    sim_time = 100 #seconds
+    sim_time = 150 #seconds
     steps_max = int(np.floor(sim_time / dt)) #iterations
     tractor.x = 20 # Error measured at kingpin (meters)
     tractor.y = 5 # Error measured at kingpin (meters)
@@ -529,8 +540,7 @@ ga.setup()
 nn.setup()
 
 # Run through 10,000 generations
-for gen in range(0, 1000):
-    ga.gen = gen + 1
+for gen in range(0, 3000):
     ga.generate_weights()
     fit_prev = 0
     fit = 0
@@ -539,6 +549,8 @@ for gen in range(0, 1000):
     # Iterate through each chromosome
     for i in range(0, ga.numchrom):
         ga.chrom = i
+        ga.fitness[ga.chrom] = 0
+        ga.rt = 0
     
         # Initialize variables
         delta = 0 # Steered wheel angle (rad)
@@ -566,7 +578,7 @@ for gen in range(0, 1000):
             # For offsetback
             dt = 0.1 #seconds
             steps_max = int(np.floor(sim_time / dt)) #iterations
-            tractor.x = 5 # Error measured at kingpin (meters)
+            tractor.x = 10 # Error measured at kingpin (meters)
             tractor.y = 55 # Error measured at kingpin (meters)
             tractor.yaw = 0 # Error measured relative to y axis (rad)
             tractor.width = 2.6
@@ -622,6 +634,7 @@ for gen in range(0, 1000):
         
         # Run simulation
         for idx in range(0, steps_max):
+            ga.rt = ga.rt + dt
 
             if controller_choice == 'nn':
                 # Call NN Controller to get Steering Angle
@@ -644,14 +657,17 @@ for gen in range(0, 1000):
             # Save data
             simulation_variables[idx,:] = np.array([tractor.x, tractor.y, trailer1.x, trailer1.y, tractor.yaw, trailer1.yaw, trailer2.x, trailer2.y, trailer2.yaw, delta, simtime], dtype=object)
 
-        # Calculate Fitness
-        fit = ga.fitness_calc()
-        if np.max(ga.fitness) > ga.alltime_fit:
-            ga.alltime_fit = np.max(ga.fitness)
-            ga.alltime_weight = ga.weights[ga.chrom,:]
-            simulation_variables_best = simulation_variables
-            best_gen = ga.gen
-        fit_prev = fit
+            # Calculate Fitness
+            fit = ga.fitness_calc()
+            if np.max(ga.fitness) > ga.alltime_fit:
+                for i in range(0, ga.numchrom):
+                    if ga.fitness[i] == np.max(ga.fitness):
+                        best_i = i
+                ga.alltime_fit = np.max(ga.fitness)
+                ga.alltime_weight = ga.weights[best_i,:]
+                simulation_variables_best = simulation_variables
+                best_gen = ga.gen
+            fit_prev = fit
 
     #if save2file == 1:
     #    np.savetxt(f,[np.max(ga.fitness)],delimiter=",",fmt="%f")
@@ -666,6 +682,7 @@ for gen in range(0, 1000):
         print('Best Fit: ', np.max(ga.fitness))
         #print('Weights: ', ga.best_weights)
         print('  ')
+    ga.gen = gen + 1
 
 print('Complete')
 print('Best Alltime Fit: ', ga.alltime_fit)
