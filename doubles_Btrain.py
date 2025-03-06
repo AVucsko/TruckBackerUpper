@@ -44,7 +44,7 @@ class pid:
 
 
 class sm:
-    def __init__(self, s_x, s_x_prev, sy, sy_prev, error_x1, error_x1_dot, error_y1, error_y1_dot, error_x2, error_x2_dot, error_y2, error_y2_dot, error_xd, error_xd_dot, error_yd, error_yd_dot):
+    def __init__(self, s_x, s_x_prev, s_y, s_y_prev, error_x1, error_x1_dot, error_y1, error_y1_dot, error_x2, error_x2_dot, error_y2, error_y2_dot, error_xd, error_xd_dot, error_yd, error_yd_dot):
         self.s_x = s_x
         self.s_x_prev = s_x_prev
         self.s_y = s_y
@@ -117,16 +117,27 @@ def pid_controller(goal, dt):
 
 def sm_controller(dt):
     # Trailer 2 - Trailer 1
-    k1x, qx = 0.0, -0.0
-    k1y, qy = -0.0, -0.0
+    k1x, qx = 0.2, -0.0
+    k1y, qy = 1, -0.0
 
     vel = -1
     L2 = 16.15
-    theta_x = np.arcsin(-np.cos(trailer2.yaw)/(vel*L2) + k1x * trailer2.x/vel)
-    theta_y = np.arcsin(-k1y*trailer2.yaw*L2/vel) + trailer2.yaw
+    ooga = -np.cos(trailer2.yaw)/(vel*L2) + k1x * trailer2.x/vel
+    if ooga > 1:
+        ooga = 1
+    elif ooga < -1:
+        ooga = -1
+    theta_x = np.arcsin(ooga)
+
+    booga = -k1y*trailer2.yaw*L2/vel
+    if booga > 1:
+        booga = 1  
+    elif booga < -1:
+        booga = -1
+    theta_y = np.arcsin(booga) + trailer2.yaw
     theta2 = theta_x + theta_y
-    sm.s_x_prev = sm.s_x
-    sm.s_y_prev = sm.s_y
+    #sm.s_x_prev = sm.s_x
+    #sm.s_y_prev = sm.s_y
 
     # If close to zero error use a simpler control scheme
     #if np.abs(tractor.x) < 0.1:
@@ -138,27 +149,36 @@ def sm_controller(dt):
     elif theta2 < -1.57:
         theta2 = -1.57
 
-    theta2 = theta2 + trailer2.yaw
+    #theta2 = theta2 + trailer2.yaw
     #if theta2 > 3.14:
     #    theta2 = theta2 - 6.28
     #print(trailer2.yaw, trailer1.yaw)
 
+    sm.sy = theta2
+    theta2_dot = (sm.sy - sm.s_y_prev)/0.1
+
     # Theta 2 is the articulation angle needed between 2 and 1
     art21 = trailer1.yaw - trailer2.yaw
-    k2y = 0.2
-    booga = -k2y*(trailer1.yaw - theta2)*L2/vel
+    k2y = .05
+    #booga = -k2y*(trailer1.yaw - theta2 + theta2_dot)*L2/vel
+    booga = -k2y*(art21 - theta2 + theta2_dot)*L2/vel
     if booga > 1:
         booga = 1  
     elif booga < -1:
         booga = -1
     
-    theta1 = np.arcsin(booga) + trailer1.yaw
+    #theta1 = np.arcsin(booga) + trailer1.yaw
+    # something is wrong here. It will request max angle even if the articulation angle desired is 0
+    # It's probably because of the built-up art21 being gigantic. Maybe need to fix that calc so it can't go beyond pi
+    theta1 = np.arcsin(booga) + art21
     if theta1 > 1.57:
         theta1 = 1.57
     elif theta1 < -1.57:
         theta1 = -1.57
+
+    sm.s_y_prev = sm.sy
     
-    print(theta2,theta1)
+    print(np.arcsin(booga), art21, theta2, theta1)
     return(theta1)
 
 
@@ -253,11 +273,19 @@ def kin_model(delta, dt, vel):
     tractor.yaw = tractor.yaw + psi_tract_dot * dt
 
     trailer1.yaw = trailer1.yaw + psi_trail1_dot * dt
+    #if tractor.yaw - trailer1.yaw > 1.57:
+    #    trailer1.yaw = tractor.yaw - 1.57
+    #elif tractor.yaw - trailer1.yaw < -1.57:
+    #    trailer1.yaw = tractor.yaw + 1.57
     trailer1.x = tractor.x - np.sin(trailer1.yaw)*(trailer1.length)
     trailer1.y = tractor.y - np.cos(trailer1.yaw)*(trailer1.length)
     art_angle = tractor.yaw - trailer1.yaw
 
     trailer2.yaw = trailer2.yaw + psi_trailer2_dot * dt
+    #if trailer1.yaw - trailer2.yaw > 1.57:
+    #    trailer2.yaw = trailer1.yaw - 1.57
+    #elif trailer1.yaw - trailer2.yaw < -1.57:
+    #    trailer2.yaw = trailer1.yaw + 1.57
     trailer2.x = trailer1.x - np.sin(trailer2.yaw)*(trailer2.length)
     trailer2.y = trailer1.y - np.cos(trailer2.yaw)*(trailer2.length)
     art_angle2 = trailer1.yaw - trailer2.yaw
